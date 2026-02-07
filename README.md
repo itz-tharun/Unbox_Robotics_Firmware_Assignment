@@ -1,1 +1,90 @@
-.
+# ATmega328P Bare-Metal Firmware Development
+
+This repository contains low-level firmware implementations for the ATmega328P (Arduino Uno), developed as part of a technical evaluation and assignment. The objective was to demonstrate proficiency in advanced RISC architecture and direct hardware register manipulation, bypassing high-level abstraction libraries like the Arduino IDE. 
+
+## GPIO Driver
+
+The primary objective of this module was to develop a bare-metal GPIO driver to toggle an LED at a precise 500ms interval using hardware timers rather than software delays.
+
+### Program Logic Flow
+The following logic ensures that the **Advanced RISC architecture** processes the LED toggle with minimal instruction overhead:
+
+
+
+```mermaid
+graph TD
+    A[Start / Reset] --> B[Initialize DDRB 0x24 as Output]
+    B --> C[Toggle PORTB 0x25 Mask]
+    C --> D[Reset Timer1 TCNT1 to 0]
+    D --> E[Start Timer1 with 1024 Prescaler]
+    E --> F{TCNT1 < 7812?}
+    F -- No --> G[Stop Timer1]
+    G --> C
+    F -- Yes --> F
+```
+
+
+### Technical Implementation & Thought Process
+
+The development process involved mapping the physical hardware to the memory-mapped I/O space and configuring internal peripherals for timing accuracy.
+
+#### 1. Register Mapping & I/O Control
+
+By bypassing the Arduino abstraction layer, I interacted directly with the 8-bit bi-directional I/O ports.
+
+1. **Port Selection:** Referenced the Pinout to identify PB5 (Digital Pin 13) as the target output.
+
+2. **Address Discovery:** Referenced Section 30. Register Summary to locate the specific memory addresses:
+
+3. **DDRB (0x24):** Data Direction Register used to configure the pin as an output.
+
+4. **PORTB (0x25):** Data Register used to toggle the pin state.
+
+#### 2. Precise Hardware Timing
+
+To achieve a reliable 500ms blink rate, I utilized the 16-bit Timer/Counter 1 instead of inaccurate software loops.
+
+1. **Configuration:** Referenced the Register Summary (Timer) to find the Control and Counter registers (TCCR1B, TCNT1).
+
+2. **Prescaler Logic:** Configured a 1024 prescaler to divide the 16MHz clock.
+
+3. **Calculation:**
+To achieve a precise **500ms** blink interval, the **16-bit Timer1** comparison value was derived using the system clock frequency and the prescaler bit settings from:
+
+
+$$\text{Ticks} = \frac{16,000,000 \text{ (CPU Clock)}}{1024 \text{ (Prescaler)}} \times 0.5 \text{ s} = 7812.5$$
+
+By setting the counter to **7812**, the firmware ensures a highly accurate toggle rate that is independent of software execution overhead.
+
+#### 3. Optimization & Architecture
+
+The implementation leverages the Advanced RISC Architecture , where 131 instructions are mostly executed in a single clock cycle.
+
+1. **Bit-Masking:** Used an OUTPUT_MASK to perform single-cycle bit-functions.
+
+2. **Throughput:** Maximized the 16MIPS throughput by reducing instruction overhead within the main execution loop.
+
+### Hardware Verification & Output
+
+To verify the bare-metal driver's accuracy, the firmware was flashed onto an ATmega328P. The output confirms that the hardware timer logic effectively maintains the requested 500ms duty cycle.
+
+1. **On-board Verification:** The implementation targets the built-in LED connected to **PB5 (Digital Pin 13)**. This provides immediate visual confirmation of the register configuration for Port B.
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/fff5709f-6a51-43f0-891e-d22f28e7d6db" alt="Internal Blinking LED Output" width="500">
+</p>
+   
+2. **External Circuitry:** An external LED was connected in series with a **220Ω current-limiting resistor** to Pin 12. This setup demonstrates that by changing the Output_mask we can toggle different pins in port B on and off.
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/d6b1e8ef-a7b6-45e2-b7c4-4d5df66af8af" alt="Blinking LED Output Port 12" width="500">
+</p>
+
+
+### Tools & Acknowledgments
+
+1. **Hardware:** ATmega328P (Arduino Uno Rev3).
+
+2. **Simulator:** Wokwi.com
+    
+3. **Documentation:** Atmel ATmega328P Automotive Datasheet.
+
+4. **Development Assistant:** This project was developed with the assistance of Gemini (Google AI) to refine documentation, optimize Git workflows, and verify register-level math against the datasheet.
