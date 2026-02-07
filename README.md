@@ -191,41 +191,41 @@ The project reached its final state through iterative hardware optimization:
 
 The USART peripheral was configured to a standard frame format to ensure compatibility with serial data interfaces:
 
-- Baud Rate: 9600 bps.
+- **Baud Rate:** 9600 bps.
 
-- Data Bits: 8 bits.
+- **Data Bits:** 8 bits.
 
-- Parity: None (Disabled).
+- **Parity:** None (Disabled).
 
-- Stop Bit: 1 bit.
+- **Stop Bit:** 1 bit.
 
 2. **Detailed Function Breakdown**
 
 A. **uart_init(unsigned int ubrr) — Hardware Configuration This function initializes the USART hardware for transmission:**
 
-- Register Mapping: The 12-bit Baud Rate value is split across UBRR0H (High byte) and UBRR0L (Low byte).
+- **Register Mapping:** The 12-bit Baud Rate value is split across UBRR0H (High byte) and UBRR0L (Low byte).
 
-- Transmitter Activation: Setting the TXEN0 bit in UCSR0B enables the transmission circuitry and takes control of the physical TX pin.
+- **Transmitter Activation:** Setting the TXEN0 bit in UCSR0B enables the transmission circuitry and takes control of the physical TX pin.
 
-- Protocol Setup: Configures UCSR0C for 8-bit character size.
+- **Protocol Setup:** Configures UCSR0C for 8-bit character size.
 
 B. **uart_transmit(unsigned char data) — Hardware Handshake A blocking function that manages the timing between the CPU and the serial hardware:** 
 
-- Polling the Flag: Monitors the UDRE0 (USART Data Register Empty) bit in UCSR0A.
+- **Polling the Flag:** Monitors the UDRE0 (USART Data Register Empty) bit in UCSR0A.
 
-- Logic: If UDRE0 is 0, the hardware is still busy. The function blocks until the buffer is clear.
+- **Logic:** If UDRE0 is 0, the hardware is still busy. The function blocks until the buffer is clear.
 
-- Handoff: Writes the character to the UDR0 register for physical transmission.
+- **Handoff:** Writes the character to the UDR0 register for physical transmission.
 
 C. **uart_print(const char str) — String Streamer Acts as the interface for human-readable data:**
 
-- Sequential Flow: Iterates through the string pointer, passing characters to uart_transmit until the null terminator (\0) is reached.
+- **Sequential Flow:** Iterates through the string pointer, passing characters to uart_transmit until the null terminator (\0) is reached.
 
 D. **delay_1000ms() — Precise Temporal Control Leverages the 16-bit Timer1 for exact 1-second intervals:**
 
-- Prescaling: Sets a 1024 divider to the system clock.
+- **Prescaling:** Sets a 1024 divider to the system clock.
 
-- Comparison: Polls TCNT1 until it reaches 15,625, signaling that exactly one second has elapsed on the silicon.
+- **Comparison:** Polls TCNT1 until it reaches 15,625, signaling that exactly one second has elapsed on the silicon.
 
 ### Hardware Verification & Output
 
