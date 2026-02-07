@@ -1,30 +1,32 @@
-/**
- * Unbox Robotics Firmware Assignment: GPIO Bare-Metal Driver
- * Goal: Toggle Pin 13 (PB5) at 500ms without libraries.
- */
+#define MY_DDRB   ((volatile unsigned char*)0x24)
+#define MY_PORTB  ((volatile unsigned char*)0x25)
 
-// We define the memory addresses as pointers to volatile unsigned chars.
-// 'volatile' ensures the compiler doesn't optimize away these hardware writes.
-#define DDRB_REG  ((volatile unsigned char*)0x24)
-#define PORTB_REG ((volatile unsigned char*)0x25)
+// Timer 1 Registers (Addresses from the extended I/O map)
+#define TCCR1B_REG ((volatile unsigned char*)0x81)
+#define TCNT1_REG  ((volatile unsigned int*)0x84)
 
-void setup() {
-    // 1. Set Pin 13 (Port B, Bit 5) as an OUTPUT.
-    // We use a Bitwise OR to set only the 5th bit to 1.
-    // Binary: 00100000 (which is 1 << 5)
-    *DDRB_REG |= (1 << 5); 
-}
+int main(void) {
+    *MY_DDRB |= (1 << 5); // Pin 13 as Output
 
-void loop() {
-    // 2. Toggle the state of Pin 13.
-    // We use a Bitwise XOR (^) to flip the 5th bit.
-    // If it was 1, it becomes 0. If it was 0, it becomes 1.
-    *PORTB_REG ^= (1 << 5);
+    while (1) {
+        *MY_PORTB ^= (1 << 5); // Toggle LED
 
-    // 3. Manual Delay Loop (Requirement: 500ms).
-    // Since we can't use delay(), we create a loop that does nothing.
-    // On a 16MHz processor, this number roughly equals 500ms of CPU time.
-    for (volatile long i = 0; i < 200000; i++) {
-        // Just spinning the CPU cycles...
+        // 1. Reset the Clock Counter to Zero
+        *TCNT1_REG = 0;
+
+        /* 2. Start the Clock with a Prescaler of 1024
+           By setting the bits in TCCR1B, we tell the hardware:
+           "Start counting every 1024 clock pulses." */
+        *TCCR1B_REG = (1 << 0) | (1 << 2); 
+
+        /* 3. Wait for the exact number of ticks.
+           Math: 16MHz / 1024 = 15,625 ticks per second.
+           For 500ms (0.5s): 15,625 * 0.5 = 7,812 ticks. */
+        while (*TCNT1_REG < 7812) {
+            // Do nothing, just watch the hardware counter box
+        }
+
+        // 4. Stop the Clock (set prescaler to 0)
+        *TCCR1B_REG = 0;
     }
 }
