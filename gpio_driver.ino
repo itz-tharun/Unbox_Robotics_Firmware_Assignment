@@ -1,32 +1,29 @@
-#define MY_DDRB   ((volatile unsigned char*)0x24)
-#define MY_PORTB  ((volatile unsigned char*)0x25)
+/* --- CONTROL PANEL --- */
+#define OUTPUT_PIN    4   // Change this to 4 for Pin 12, 0 for Pin 8, etc.
+#define OUTPUT_MASK (1 << OUTPUT_PIN) // Reduces the number of times (1 << OUTPUT_PIN) operation is done to one time.
+/* --- REGISTER ADDRESSES --- */
+#define MY_DDRB    ((volatile unsigned char*)0x24)
+#define MY_PORTB   ((volatile unsigned char*)0x25)
 
-// Timer 1 Registers (Addresses from the extended I/O map)
+// Timer 1 (Clock) Registers
 #define TCCR1B_REG ((volatile unsigned char*)0x81)
 #define TCNT1_REG  ((volatile unsigned int*)0x84)
 
 int main(void) {
-    *MY_DDRB |= (1 << 5); // Pin 13 as Output
+    // Now the code uses 'OUTPUT_MASK' instead of (1 << OUTPUT_PIN) or (1 << 4)
+    *MY_DDRB |= OUTPUT_MASK; 
 
     while (1) {
-        *MY_PORTB ^= (1 << 5); // Toggle LED
+        *MY_PORTB ^= OUTPUT_MASK; 
 
-        // 1. Reset the Clock Counter to Zero
+        // Reset and Start Timer
         *TCNT1_REG = 0;
+        *TCCR1B_REG = (1 << 0) | (1 << 2); // Start Prescaler 1024
 
-        /* 2. Start the Clock with a Prescaler of 1024
-           By setting the bits in TCCR1B, we tell the hardware:
-           "Start counting every 1024 clock pulses." */
-        *TCCR1B_REG = (1 << 0) | (1 << 2); 
+        // Wait for 500ms
+        while (*TCNT1_REG < 7812) { }
 
-        /* 3. Wait for the exact number of ticks.
-           Math: 16MHz / 1024 = 15,625 ticks per second.
-           For 500ms (0.5s): 15,625 * 0.5 = 7,812 ticks. */
-        while (*TCNT1_REG < 7812) {
-            // Do nothing, just watch the hardware counter box
-        }
-
-        // 4. Stop the Clock (set prescaler to 0)
+        // Stop Timer
         *TCCR1B_REG = 0;
     }
 }
